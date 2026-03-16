@@ -1,81 +1,144 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
+
 <head>
+
 <meta charset="UTF-8">
-<title>ChatLBZ</title>
+<title>ChatLBZ AI</title>
 
 <style>
+
 body{
-font-family:sans-serif;
-background:#eee;
-padding:50px;
-text-align:center;
+font-family:Arial;
+background:#0f172a;
+margin:0;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
 }
 
-.container{
-background:white;
-padding:30px;
+.chatBox{
+width:400px;
+height:600px;
+background:#1e293b;
 border-radius:20px;
-box-shadow:0 5px 20px rgba(0,0,0,0.1);
-display:inline-block;
+display:flex;
+flex-direction:column;
+overflow:hidden;
+box-shadow:0 10px 30px rgba(0,0,0,0.5);
+}
+
+.header{
+background:#2563eb;
+padding:15px;
+text-align:center;
+font-size:20px;
+font-weight:bold;
+}
+
+.messages{
+flex:1;
+padding:15px;
+overflow-y:auto;
+}
+
+.msg{
+margin-bottom:10px;
+padding:10px;
+border-radius:10px;
+max-width:80%;
+}
+
+.user{
+background:#2563eb;
+margin-right:auto;
+}
+
+.ai{
+background:#334155;
+margin-left:auto;
+}
+
+.inputArea{
+display:flex;
+padding:10px;
+background:#0f172a;
 }
 
 input{
+flex:1;
 padding:10px;
-width:250px;
-border-radius:5px;
-border:1px solid #ccc;
+border:none;
+border-radius:10px;
 }
 
 button{
+margin-right:10px;
 padding:10px 20px;
-background:blue;
-color:white;
+background:#2563eb;
 border:none;
-border-radius:5px;
+color:white;
+border-radius:10px;
 cursor:pointer;
 }
 
-#res{
-margin-top:20px;
-color:darkblue;
-font-weight:bold;
-max-width:400px;
-}
 </style>
 
 </head>
 
 <body>
 
-<div class="container">
+<div class="chatBox">
 
-<h2>בדיקת ChatLBZ</h2>
+<div class="header">
+ChatLBZ AI
+</div>
 
-<input type="text" id="userInput" placeholder="תכתוב משהו...">
+<div class="messages" id="chat"></div>
 
-<br><br>
-
-<button onclick="callAI()">שלח</button>
-
-<div id="res">ממתין לפקודה...</div>
+<div class="inputArea">
+<input id="text" placeholder="כתוב הודעה...">
+<button onclick="send()">שלח</button>
+</div>
 
 </div>
 
 <script>
 
-async function callAI(){
+const API_KEY = "PUT_YOUR_GEMINI_KEY_HERE";
 
-const out = document.getElementById("res");
-const input = document.getElementById("userInput").value;
+function addMessage(text,type){
 
-const API_KEY = "AIzaSyCAdxhCxymVN6I_VECi9_qjC_eeJKEy8E4";
+const chat=document.getElementById("chat");
 
-out.innerText="שולח...";
+const div=document.createElement("div");
+div.className="msg "+type;
+div.innerText=text;
+
+chat.appendChild(div);
+
+chat.scrollTop=chat.scrollHeight;
+
+}
+
+async function send(){
+
+const input=document.getElementById("text");
+const text=input.value;
+
+if(!text) return;
+
+addMessage(text,"user");
+
+input.value="";
+
+addMessage("חושב...","ai");
 
 try{
 
-const response = await fetch(
+const response=await fetch(
 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
 {
 method:"POST",
@@ -86,7 +149,7 @@ body:JSON.stringify({
 contents:[
 {
 parts:[
-{text:input}
+{text:text}
 ]
 }
 ]
@@ -94,31 +157,17 @@ parts:[
 }
 );
 
-const data = await response.json();
+const data=await response.json();
 
-if(data.error){
+document.querySelector(".ai:last-child").remove();
 
-out.style.color="red";
-out.innerText=data.error.message;
-console.log(data);
+const reply=data.candidates[0].content.parts[0].text;
 
-return;
-}
+addMessage(reply,"ai");
 
-if(!data.candidates){
+}catch(e){
 
-out.innerText="לא התקבלה תשובה מהמודל";
-return;
-}
-
-out.style.color="green";
-out.innerText=data.candidates[0].content.parts[0].text;
-
-}
-catch(e){
-
-out.style.color="red";
-out.innerText="תקלה: "+e.message;
+addMessage("שגיאה בחיבור ל-AI","ai");
 
 }
 
@@ -127,4 +176,5 @@ out.innerText="תקלה: "+e.message;
 </script>
 
 </body>
+
 </html>
