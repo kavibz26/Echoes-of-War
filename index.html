@@ -1,87 +1,24 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
-
+<html lang="he">
 <head>
-
 <meta charset="UTF-8">
-<title>ChatLBZ AI</title>
+<title>LBZ Battle</title>
 
 <style>
 
 body{
-font-family:Arial;
-background:#0f172a;
 margin:0;
+background:black;
 color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-.chatBox{
-width:400px;
-height:600px;
-background:#1e293b;
-border-radius:20px;
-display:flex;
-flex-direction:column;
-overflow:hidden;
-box-shadow:0 10px 30px rgba(0,0,0,0.5);
-}
-
-.header{
-background:#2563eb;
-padding:15px;
+font-family:Arial;
 text-align:center;
-font-size:20px;
-font-weight:bold;
 }
 
-.messages{
-flex:1;
-padding:15px;
-overflow-y:auto;
-}
-
-.msg{
-margin-bottom:10px;
-padding:10px;
-border-radius:10px;
-max-width:80%;
-}
-
-.user{
-background:#2563eb;
-margin-right:auto;
-}
-
-.ai{
-background:#334155;
-margin-left:auto;
-}
-
-.inputArea{
-display:flex;
-padding:10px;
-background:#0f172a;
-}
-
-input{
-flex:1;
-padding:10px;
-border:none;
-border-radius:10px;
-}
-
-button{
-margin-right:10px;
-padding:10px 20px;
-background:#2563eb;
-border:none;
-color:white;
-border-radius:10px;
-cursor:pointer;
+canvas{
+background:#111;
+display:block;
+margin:auto;
+border:3px solid white;
 }
 
 </style>
@@ -90,91 +27,121 @@ cursor:pointer;
 
 <body>
 
-<div class="chatBox">
+<h2>LBZ Battle</h2>
+<p>תזוזה: חצים | ירי: רווח</p>
 
-<div class="header">
-ChatLBZ AI
-</div>
-
-<div class="messages" id="chat"></div>
-
-<div class="inputArea">
-<input id="text" placeholder="כתוב הודעה...">
-<button onclick="send()">שלח</button>
-</div>
-
-</div>
+<canvas id="game" width="800" height="500"></canvas>
 
 <script>
 
-const API_KEY = "PUT_YOUR_GEMINI_KEY_HERE";
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-function addMessage(text,type){
+let player = {x:400,y:250,size:20,speed:5};
+let bullets=[];
+let enemies=[];
+let score=0;
 
-const chat=document.getElementById("chat");
+function spawnEnemy(){
 
-const div=document.createElement("div");
-div.className="msg "+type;
-div.innerText=text;
-
-chat.appendChild(div);
-
-chat.scrollTop=chat.scrollHeight;
-
-}
-
-async function send(){
-
-const input=document.getElementById("text");
-const text=input.value;
-
-if(!text) return;
-
-addMessage(text,"user");
-
-input.value="";
-
-addMessage("חושב...","ai");
-
-try{
-
-const response=await fetch(
-`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-contents:[
-{
-parts:[
-{text:text}
-]
-}
-]
-})
-}
-);
-
-const data=await response.json();
-
-document.querySelector(".ai:last-child").remove();
-
-const reply=data.candidates[0].content.parts[0].text;
-
-addMessage(reply,"ai");
-
-}catch(e){
-
-addMessage("שגיאה בחיבור ל-AI","ai");
+enemies.push({
+x:Math.random()*800,
+y:Math.random()*500,
+size:20,
+speed:1+Math.random()*2
+});
 
 }
 
+setInterval(spawnEnemy,1500);
+
+let keys={};
+
+document.addEventListener("keydown",e=>{
+keys[e.key]=true;
+
+if(e.key===" "){
+bullets.push({x:player.x,y:player.y,vy:-7});
 }
+});
+
+document.addEventListener("keyup",e=>{
+keys[e.key]=false;
+});
+
+function update(){
+
+if(keys["ArrowUp"]) player.y-=player.speed;
+if(keys["ArrowDown"]) player.y+=player.speed;
+if(keys["ArrowLeft"]) player.x-=player.speed;
+if(keys["ArrowRight"]) player.x+=player.speed;
+
+bullets.forEach(b=>b.y+=b.vy);
+
+enemies.forEach(e=>{
+
+let dx=player.x-e.x;
+let dy=player.y-e.y;
+
+let dist=Math.sqrt(dx*dx+dy*dy);
+
+e.x+=dx/dist*e.speed;
+e.y+=dy/dist*e.speed;
+
+});
+
+bullets.forEach((b,bi)=>{
+enemies.forEach((e,ei)=>{
+
+let dx=b.x-e.x;
+let dy=b.y-e.y;
+
+if(Math.sqrt(dx*dx+dy*dy)<20){
+
+enemies.splice(ei,1);
+bullets.splice(bi,1);
+score++;
+
+}
+
+});
+});
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,800,500);
+
+ctx.fillStyle="blue";
+ctx.fillRect(player.x-10,player.y-10,20,20);
+
+ctx.fillStyle="yellow";
+bullets.forEach(b=>{
+ctx.fillRect(b.x,b.y,5,10);
+});
+
+ctx.fillStyle="red";
+enemies.forEach(e=>{
+ctx.fillRect(e.x-10,e.y-10,20,20);
+});
+
+ctx.fillStyle="white";
+ctx.fillText("Score: "+score,10,20);
+
+}
+
+function gameLoop(){
+
+update();
+draw();
+requestAnimationFrame(gameLoop);
+
+}
+
+gameLoop();
 
 </script>
 
 </body>
-
 </html>
